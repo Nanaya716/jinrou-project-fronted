@@ -27,10 +27,7 @@ import WebSocketManager from '@/net/websocket-manager';
 
 onMounted(() => {
   WebSocketManager.startConnection(); // 启动 WebSocket 连接
-  console.log("provide:")
-  console.log(WebSocketManager)
 
-  provide('websocket', WebSocketManager); // 共享 WebSocket 管理对象
 });
 
 onUnmounted(() => {

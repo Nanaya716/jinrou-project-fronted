@@ -106,7 +106,6 @@ const fontSize = ref('14px'); // 默认 14px
 const store = useStore();
 const user = store.auth.user;
 const roomId = 0; // 休息室暂时不用房间号
-console.log("roomId:" + store.auth.nowRoomId)
 // 动态获取messages 用于渲染聊天内容
 var messages = ref([]);
 // 动态获取在线用户列表
@@ -158,17 +157,11 @@ onMounted(() => {
 
   // 等待 WebSocketManager 初始化完成
   waitForConnection().then(() => {
-
-    console.log("websocketManager:2");
-    console.log(WebSocketManager);
     WebSocketManager.subscribe("/app/chatRoom", (receivedData) => {
-      console.log(receivedData);
     });
     // 订阅话题
     WebSocketManager.subscribe("/topic/chatRoom", (receivedData) => {
       if (receivedData.messageType === "DAYTALK") {
-        console.log("准备推送！！！！")
-        console.log(receivedData)
         messages.value.push(receivedData);
         if (messages.value.length > 100) {
           messages.value = messages.value.slice(-100);
@@ -176,11 +169,6 @@ onMounted(() => {
         // 在新消息后判断是否滚动到底部
         const container = messagesContainer.value.$el;
         if (container) {
-          console.log("scrollHeight:", container.scrollHeight);
-          console.log("scrollTop:", container.scrollTop);
-          console.log("clientHeight:", container.clientHeight);
-          console.log("scrollTop + clientHeight:", container.scrollTop + container.clientHeight);
-
           const isAtBottom = Math.abs(container.scrollTop + container.clientHeight - container.scrollHeight) <= 1;
           if (isAtBottom) {
             nextTick(() => {
@@ -192,8 +180,6 @@ onMounted(() => {
       }
       if (receivedData.messageType === "GM") {
         onlineUsers.value = JSON.parse(receivedData.messageContent);
-        console.log(onlineUsers.value);
-        //todo
       }
     });
     WebSocketManager.subscribe(`/user/queue/${roomId}/messages`, (receivedData) => {

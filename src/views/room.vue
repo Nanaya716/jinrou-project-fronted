@@ -600,7 +600,6 @@ onMounted(() => {
       const topic = `/topic/room/${roomId.value}/${channel}`;
       WebSocketManager.subscribe(topic, (receivedData) => {
         try {
-          console.log(receivedData.code);
           // 根据字段特性判断
           if (receivedData.code) {
             // 处理 GameActionBody
@@ -635,7 +634,6 @@ watch(GAME_SYSTEM_CHANNEL, (NEW_GAME_SYSTEM_CHANNEL, OLD_GAME_SYSTEM_CHANNEL) =>
   // 找出新增和移除的频道
   const addedChannels = NEW_GAME_SYSTEM_CHANNEL.filter((state) => !OLD_GAME_SYSTEM_CHANNEL.includes(state));
   const removedChannels = OLD_GAME_SYSTEM_CHANNEL.filter((state) => !NEW_GAME_SYSTEM_CHANNEL.includes(state));
-  console.log(GAME_SYSTEM_CHANNEL)
   // 对新增频道进行订阅
   addedChannels.forEach((channel) => {
     const topic = `/topic/room/${roomId.value}/${channel}`;
@@ -805,7 +803,6 @@ const handleGameSettingConfirm = async (gameSetting) => {
     const createdRoomId = await ChangeGameSetting(GameSettingForm.value, identityList);
     GameSettingVisible.value = false;
     ElMessage.success("配置修改成功！");
-    console.log("创建的房间 ID:", createdRoomId); // 调试用
   } catch (error) {
     ElMessage.error(error.message || "配置修改失败，请重试！");
   }

@@ -14,7 +14,6 @@ const defaultFailure = (failure) => ElMessage.warning('失败：'+failure.messag
 // 获取当前 Pinia 中的 store
 function getToken() {
   const pinia = getActivePinia();
-  console.log(pinia);
   if (pinia) {
     const store = pinia.state.value.auth;  // 获取当前 store
     return store?.auth?.token;        // 从 store 中获取 token
@@ -27,7 +26,7 @@ var token = getToken();
 
 // 创建 Axios 实例并设置默认配置
 const axiosInstance = axios.create({
-    baseURL: 'http://localhost:8081', // 设置默认的请求地址
+    baseURL: 'http://localhost:8080', // 设置默认的请求地址
     withCredentials: true, // 允许跨域请求携带 Cookies
 });
 
@@ -49,7 +48,6 @@ function post(url, data, success, failure = defaultFailure, error = defaultError
             'Content-Type': 'application/json', //json数据类型
         },
     }).then(({ data }) => {
-        console.log(data);
         if (data.code == 200) {
             success(data);
         } else {

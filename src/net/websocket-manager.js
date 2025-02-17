@@ -31,7 +31,7 @@ class WebSocketManager {
     }
 
     this.client = new Client({
-      webSocketFactory: () => new SockJS(`http://localhost:8081/wsConnect?token=${this.token}`), // 使用 SockJS 创建 WebSocket 连接
+      webSocketFactory: () => new SockJS(`http://localhost:8080/wsConnect?token=${this.token}`), // 使用 SockJS 创建 WebSocket 连接
       connectHeaders: {
         Authorization: `Bearer ${this.token}`,
       },
@@ -41,7 +41,6 @@ class WebSocketManager {
       
         // 遍历已保存的订阅路径并重新订阅
         this.subscriptions.forEach((value, destination) => {
-          console.log(`重新订阅路径: ${destination}`);
           this.subscribe(destination, value.callback); // 使用保存的回调重新订阅
         });
       },
@@ -85,7 +84,6 @@ class WebSocketManager {
       if (callback && typeof callback === 'function') {
         callback(message);
       }
-      console.log(`消息已发送到 ${destination} :${JSON.stringify(message)}`);
     } else {
       console.error('WebSocket 尚未连接，无法发送消息');
     }
@@ -100,11 +98,8 @@ class WebSocketManager {
       // 执行订阅
       const subscription = this.client.subscribe(destination, (message) => {
         const receivedData = JSON.parse(message.body);
-        console.log(`收到消息: ${JSON.stringify(receivedData)}`);
         callback(receivedData); // 调用回调
       });
-
-      console.log('已订阅路径：' + destination);
 
       // 保存订阅对象和回调函数到 Map
       this.subscriptions.set(destination, { subscription, callback });
@@ -119,7 +114,6 @@ class WebSocketManager {
     if (subscriptionInfo && subscriptionInfo.subscription) {
       subscriptionInfo.subscription.unsubscribe(); // 取消订阅
       this.subscriptions.delete(destination); // 从 Map 中删除
-      console.log(`已取消订阅: ${destination}`);
     } else {
       console.error(`没有找到订阅路径: ${destination}`);
     }
