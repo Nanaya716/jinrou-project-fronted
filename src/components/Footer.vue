@@ -6,7 +6,6 @@
 </template>
 
 <script setup>
-// 这里不需要额外的逻辑，只需渲染 footer 内容
 </script>
 
 <style scoped>

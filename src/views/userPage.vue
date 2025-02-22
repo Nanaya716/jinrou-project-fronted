@@ -93,7 +93,6 @@ const form_rules = {
 
 const toggleEditMode = () => {
   if (edit_mode.value) {
-    console.log(JSON.stringify(user.value));
     post('/api/user/updateUserDetail', user.value, 
       (response) => {
         const { token, user: updatedUser, message } = response.data;

@@ -71,10 +71,10 @@ import {ElMessage} from "element-plus";
 import {post} from "@/net";
 
 const form = reactive({
-    account: 'nameless',
-    password: 'f190979959',
-    password_repeat: 'f190979959',
-    email: '714991699@qq.com',
+    account: '',
+    password: '',
+    password_repeat: '',
+    email: '',
     code: '114514'
 })
 

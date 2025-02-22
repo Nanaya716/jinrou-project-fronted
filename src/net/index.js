@@ -26,7 +26,7 @@ var token = getToken();
 
 // 创建 Axios 实例并设置默认配置
 const axiosInstance = axios.create({
-    baseURL: 'http://localhost:8080', // 设置默认的请求地址
+    baseURL: '/', // 使用根路径
     withCredentials: true, // 允许跨域请求携带 Cookies
 });
 
@@ -70,27 +70,5 @@ function get(url, success, failure = defaultFailure, error = defaultError) {
         error(err);  // 调用传入的 error 函数
     });
 }
-
-
-// const client = new Client({
-//     // 使用 SockJS 工厂创建 WebSocket
-//     webSocketFactory: () => new SockJS('http://localhost:8081/ws'),
-//     connectHeaders: {
-//         Authorization: `Bearer ${token = getToken()}`,
-//     },
-//     onConnect: () => {
-//         console.log('STOMP 连接成功:', WebsocketToken);
-//         client.subscribe('/topic/game-updates', (message) => {
-//             console.log('收到消息:', message.body);
-//         });
-//     },
-//     onStompError: (frame) => {
-//         console.error('STOMP 错误:', frame);
-//     },
-//     debug: (str) => console.log(str),
-// });
-
-// // 启动连接
-// client.activate();
 
 export { get, post };

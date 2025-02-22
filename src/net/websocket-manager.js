@@ -31,13 +31,13 @@ class WebSocketManager {
     }
 
     this.client = new Client({
-      webSocketFactory: () => new SockJS(`http://localhost:8080/wsConnect?token=${this.token}`), // 使用 SockJS 创建 WebSocket 连接
+      webSocketFactory: () => new SockJS(`/api/wsConnect?token=${this.token}`), // 使用 SockJS 创建 WebSocket 连接
       connectHeaders: {
         Authorization: `Bearer ${this.token}`,
       },
       onConnect: () => {
         this.isConnected = true;
-        console.log('STOMP 连接成功');
+        console.log('连接成功');
       
         // 遍历已保存的订阅路径并重新订阅
         this.subscriptions.forEach((value, destination) => {
@@ -62,7 +62,7 @@ class WebSocketManager {
     if (this.client) {
       this.client.deactivate();
       this.isConnected = false;
-      console.log('WebSocket 连接已关闭');
+      console.log('连接关闭');
     }
   }
 

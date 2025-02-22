@@ -141,7 +141,7 @@ var originalRooms = ref([]);
 var filteredRooms = ref([]);
 var paginatedRooms = ref([]);
 var currentPage = ref(1);
-const pageSize = 1;
+const pageSize = 5;
 var totalPages = ref(0);
 var roomFormRef = ref(null);
 // 总页数

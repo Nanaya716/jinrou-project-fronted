@@ -123,8 +123,7 @@
                   <div v-if="msg.messageType !== 'SYSTEM'" class="message-user">
                     <span class="user" v-if="msg.playerName != null">{{ getMsgTitle(msg).playerName + ":" }}</span>
                   </div>
-                  <div class="message-content"
-                    :style="{ color: msg.fontColor, fontSize: msg.fontSize ? msg.fontSize : fontSize }">
+                  <div class="message-content" :style="{ color: msg.fontColor, fontSize: msg.fontSize }">
                     {{ msg.messageContent }}
                   </div>
                   <div class="message-time" :style="{ fontSize: '10px', userSelect: 'none' }">
@@ -148,9 +147,14 @@
                       <el-avatar :src="defaultAvatar" size="50" shape="square" class="player-avatar" />
                       <!-- 玩家信息 -->
                       <div class="player-info">
-                        <router-link :to="{ name: 'UserProfile', params: { userId: user.userId } }" class="user-link">
-                          {{ user.name }}
-                        </router-link>
+                        <template v-if="isRoomCreator || gameEnd == true && room">
+                          <router-link :to="{ name: 'UserProfile', params: { userId: user.userId } }" class="user-link">
+                            {{ user.name }}
+                          </router-link>
+                        </template>
+                        <template v-else>
+                          <span class="user-link">{{ user.name }}</span>
+                        </template>
                         <span v-if="!user.isAlive">[死亡]</span>
                         <div class="player-status">
                           <span v-if="user.isReady && gameState == '' && !gameEnd">[Ready]</span>
@@ -236,14 +240,16 @@
             <el-button v-if="needKami" type="danger"
               @click="sendGameActionBody(ConstConfig.GAME_ACTION_KAMI)">确定行动</el-button>
 
-            <el-select v-if="gameState !== '' && isRoomCreator && gameEnd != true && identityName == 'GM'" v-model="nowSelectPlayer" placeholder="游戏管理" class="font-size-selector">
-              <el-option v-if="gameState !== '' && isRoomCreator && gameEnd != true && identityName == 'GM'" v-for="player in GM_IdentityRoom.players?.filter(player => player.identity.name != 'GM')"
+            <el-select v-if="gameState !== '' && isRoomCreator && gameEnd != true && identityName == 'GM'"
+              v-model="nowSelectPlayer" placeholder="游戏管理" class="font-size-selector">
+              <el-option v-if="gameState !== '' && isRoomCreator && gameEnd != true && identityName == 'GM'"
+                v-for="player in GM_IdentityRoom.players?.filter(player => player.identity.name != 'GM')"
                 :key="player.roomPlayerId" :label="player.name" :value="player.roomPlayerId"></el-option>
             </el-select>
             <el-button v-if="gameState !== '' && isRoomCreator && gameEnd != true && identityName == 'GM'" type="danger"
               @click="sendGameActionBody(ConstConfig.GAME_GM_KILL)">处死玩家</el-button>
-            <el-button v-if="gameState !== '' && isRoomCreator && gameEnd != true && identityName == 'GM'" type="primary"
-              @click="sendGameActionBody(ConstConfig.GAME_GM_REVIVE)">复活玩家</el-button>
+            <el-button v-if="gameState !== '' && isRoomCreator && gameEnd != true && identityName == 'GM'"
+              type="primary" @click="sendGameActionBody(ConstConfig.GAME_GM_REVIVE)">复活玩家</el-button>
 
             <!-- GM操作时间 -->
             <el-button v-if="gameState !== '' && isRoomCreator && gameEnd != true && identityName == 'GM'" type="danger"
@@ -348,17 +354,17 @@
               </el-form-item>
 
               <el-form-item label="夜晚时间 (秒)">
-                <el-input-number v-model="GameSettingForm.nightDuration" :min="1" :max="300" label="夜晚时间 (秒)"
+                <el-input-number v-model="GameSettingForm.nightDuration" :min="1" :max="600" label="夜晚时间 (秒)"
                   :step="30" />
               </el-form-item>
 
               <el-form-item label="投票时间 (秒)">
-                <el-input-number v-model="GameSettingForm.voteDuration" :min="1" :max="300" label="投票时间 (秒)"
+                <el-input-number v-model="GameSettingForm.voteDuration" :min="1" :max="600" label="投票时间 (秒)"
                   :step="30" />
               </el-form-item>
 
               <el-form-item label="黎明时间 (秒)">
-                <el-input-number v-model="GameSettingForm.morningDuration" :min="1" :max="300" label="黎明时间 (秒)"
+                <el-input-number v-model="GameSettingForm.morningDuration" :min="1" :max="600" label="黎明时间 (秒)"
                   :step="30" />
               </el-form-item>
 
@@ -490,7 +496,7 @@ var channels = ref([
 
 // 处理 Enter 和 Shift+Enter
 const handleEnterKey = (event) => {
-  if (!event.shiftKey) {
+  if (event.shiftKey) {
     event.preventDefault(); // 阻止默认行为（换行）
     sendMessage();
   }
@@ -575,6 +581,7 @@ onMounted(() => {
         //1.说明是游戏状态对象GameActionBody
         handleGameActionBody(receivedData);
       } else if (Array.isArray(receivedData)) {
+        messages.value.length = 0;
         // 说明是消息列表
         receivedData.forEach((msg) => {
           messages.value.push(msg);
@@ -685,7 +692,7 @@ const handleGameActionBody = (receivedData) => {
 
 //加入房间
 function JoinRoom(roomId, userId, name) {
-  if(name.length > 8){
+  if (name.length > 8) {
     ElMessage.error(`名字长度不可超过8字符`);
     return;
   }

@@ -14,7 +14,7 @@
   
   // 当组件挂载时，加载并渲染 Markdown 文件
   onMounted(async () => {
-    const response = await fetch('src/markdown/knowledge.md')
+    const response = await fetch('markdown/knowledge.md')
     markdownContent.value = await response.text()
   })
   

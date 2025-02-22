@@ -47,8 +47,8 @@ import {useStore} from "@/stores";
 const store = useStore()
 
 const form = reactive({
-    account: 'nameless',
-    password: 'f190979959',
+    account: '',
+    password: '',
     remember: false
 })
 
@@ -66,7 +66,6 @@ const login = () => {
             const { token, user } = response.data;  // 注意使用 response.data
             const { message } = response; 
             if (token && user) {
-                console.log("登陆前的user",store.auth.user)
                 // 将用户信息存入 Pinia 状态
                 store.setToken(token); // 保存 Token
                 store.setUser(user); // 保存用户信息

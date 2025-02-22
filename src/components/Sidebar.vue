@@ -87,8 +87,6 @@ watch(
 const handleOpen = (index) => {
   if (!openMenus.value.includes(index)) {
     openMenus.value.push(index);
-    console.log("open", index)
-    console.log("menus", openMenus)
   }
 };
 
@@ -96,9 +94,6 @@ const handleClose = (index) => {
   const idx = openMenus.value.indexOf(index);
   if (idx !== -1) {
     openMenus.value.splice(idx, 1);
-    console.log("close", index)
-    console.log("menus", openMenus)
-
   }
 };
 

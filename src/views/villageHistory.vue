@@ -104,7 +104,7 @@ var originalRooms = ref([]);
 var filteredRooms = ref([]);
 var paginatedRooms = ref([]);
 var currentPage = ref(1);
-const pageSize = 1;
+const pageSize = 5;
 var totalPages = ref(0);
 var roomFormRef = ref(null);
 // 总页数
@@ -128,8 +128,6 @@ const paginateRooms = (filteredRooms) => {
   const rooms = filteredRooms.slice(start, end)
   paginatedRooms.value = rooms;
   totalPages.value = Math.ceil(filteredRooms.length / pageSize);
-  console.log(filteredRooms)
-  console.log(rooms);
 }
 
 const changeFilterState = (state) => {
@@ -177,7 +175,6 @@ function getRoomsWithStates(states, userId) {
       if (message && data) {
         originalRooms.value = data;
         changeFilterState(nowFilterState.value); // 数据加载完成后调用
-        console.log(data)
         resolve(); // 异步操作成功时调用 resolve
       } else {
         ElMessage.error(`错误：${message}`);
@@ -212,7 +209,7 @@ function filteredPlayer(roomId) {
   const room = paginatedRooms.value.find(room => room.roomId === roomId);
   
   // 如果找到了房间，过滤该房间的玩家列表
-  return room.players.find(player => player.userId === this.store.auth.user.userId);
+  return room.players.find(player => player.userId === store.auth?.user?.userId);
 }
 
 function filteredRoom(roomId) {

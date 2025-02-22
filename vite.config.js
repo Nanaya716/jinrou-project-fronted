@@ -21,5 +21,9 @@ export default defineConfig({
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
     }
-  }
+  },
+  build: {
+    sourcemap: false, // 关闭 Sourcemap
+    minify: true
+  },
 })
