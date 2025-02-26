@@ -61,10 +61,10 @@
               </el-button>
             </template>
           </el-popover>
-          <el-popover placement="bottom" title="村规" :width="200" trigger="hover">
+          <el-popover placement="bottom" title="村规" width="auto" trigger="click">
             <!-- 使用 slot 传入 Vue 模板内容 -->
             <template #default>
-              <div>
+              <div style="white-space: pre-line;max-width: 700px; min-width: 200px; ">
                 <p>{{ room.villageRule }}</p>
               </div>
             </template>
@@ -80,6 +80,57 @@
             @click="DestoryRoom()">
             废弃房间
           </el-button>
+
+          <!-- 移动端悬浮按钮 -->
+          <div v-show="isMobile" class="mobile-users-button" @click="showUsersDrawer = !showUsersDrawer">
+            <el-icon :size="24">
+              <User />
+            </el-icon>
+          </div>
+
+          <!-- 移动端抽屉 -->
+          <el-drawer v-model="showUsersDrawer" title="在线玩家" direction="rtl" size="85%">
+            <el-card class="online-users-card" shadow="always">
+              <div class="scroll-container">
+                <el-row>
+                  <el-col v-for="(forPlayer, index) in sortedPlayers" :key="index" :span="12">
+                    <el-card shadow="hover" :body-style="{ padding: '7px', backgroundColor:forPlayer.isAlive ? 'white' : 'grey'}">
+                      <div class="player-container">
+                        <!-- 用于显示该玩家的所有发言 -->
+                        <el-avatar
+                          :src="forPlayer.iconUrl ? `${server_url}/static${forPlayer.iconUrl}` : `${server_url}/static/defaultIcon.png`"
+                          shape="square" class="player-avatar" :class="{ 'grayscale': !forPlayer.isAlive }"
+                          @click="togglePlayerMessages(forPlayer)" />
+                        <!-- 玩家信息 -->
+                        <div class="player-info">
+                          <template v-if="isRoomCreator || gameEnd == true && room">
+                            <router-link :to="{ name: 'UserProfile', params: { userId: forPlayer.userId } }"
+                              class="user-link">
+                              {{ forPlayer.name }}
+                            </router-link>
+                          </template>
+                          <template v-else>
+                            <span class="user-link">{{ forPlayer.name }}</span>
+                          </template>
+                          <span v-if="!forPlayer.isAlive">[死亡]</span>
+                          <span v-if="forPlayer?.userId == room?.roomCreatorId && room.gameSettings.gmMode">[GM]</span>
+
+                          <div class="player-status">
+                            <span v-if="forPlayer.isReady && gameState == '' && !gameEnd">[Ready]</span>
+                            <span v-if="GM_IdentityRoom?.players">
+                              {{GM_IdentityRoom.players.find(player => player.roomPlayerId ===
+                                forPlayer.roomPlayerId)?.identity?.name
+                                || ""}}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </el-card>
+                  </el-col>
+                </el-row>
+              </div>
+            </el-card>
+          </el-drawer>
         </div>
         <br>
 
@@ -94,14 +145,18 @@
         <br>
         {{ room?.roomDescription || "暂无描述" }}
         <br>
-        <el-tag class="uranai-tag" :style="{ fontSize: '16px' }">当前游戏状态：{{ gameState ? gameState + dayNum :
-          getRoomState()
+        <el-tag class="uranai-tag" :style="{ fontSize: '16px' }">当前游戏状态：{{ getRoomState() }}</el-tag> &nbsp;
+        <el-tag class="uranai-tag" :style="{ fontSize: '16px' }">配役：{{ formattedIdentityListCount }}</el-tag>&nbsp;
+        <el-tag class="uranai-tag" :style="{ fontSize: '16px' }" :type="identityColor">您的身份：{{ identityName || "暂无职业"
         }}</el-tag>
         &nbsp;
-        <el-tag class="uranai-tag" :style="{ fontSize: '16px' }">您的身份：{{ identityName || "暂无职业" }}</el-tag> &nbsp;
-        <el-tag class="uranai-tag" :style="{ fontSize: '16px' }" v-if="gameState">剩余时间：{{ times || 0 }}秒 &nbsp;</el-tag>
+        <el-tag class="uranai-tag" :style="{ fontSize: '16px' }" type="danger" v-if="gameState">剩余时间：{{ times || 0 }}
+          &nbsp;</el-tag>
         <!-- 当前配置：{{ gameSettings?.identityList }} -->
-        <el-tag class="uranai-tag" :style="{ fontSize: '16px' }">配役：{{ formattedIdentityListCount }}</el-tag>
+        <el-tag class="uranai-tag" :style="{ fontSize: '16px' }" v-if="room.players">
+          生存人数：{{ getAlivePlayers(room?.gameSettings?.gmMode, gameState) }}人 / 死亡人数：{{ getDiedPlayers(
+            room?.gameSettings?.gmMode, gameState) }}人
+        </el-tag>&nbsp;
         <el-tag class="uranai-tag" :style="{ fontSize: '16px' }" v-if="partners?.length">
           同伴：
           <span v-for="(partner, index) in partners" :key="partner.roomPlayerId">
@@ -113,20 +168,38 @@
       <!-- 主体部分 -->
       <el-row class="main-content">
         <!-- 聊天消息和在线用户分两列 -->
-        <el-col :span="18" class="messages-section" ref="messagesContainer">
+        <el-col :xs="24" :sm="18" :md="18" class="messages-section" ref="messagesContainer">
           <el-card class="message-card" shadow="always">
             <!-- 消息列表 -->
             <div class="messages">
               <div v-for="(msg, index) in messages" :key="index" class="message">
                 <!-- 每条消息是一个message-line -->
-                <div class="message-line" :class="getMessageClass(msg.messageType)">
+                <div class="message-line" :class="[msg.messageType, { 'gm-message': isGmMessage(msg) }]">
                   <div v-if="msg.messageType !== 'SYSTEM'" class="message-user">
                     <span class="user" v-if="msg.playerName != null">{{ getMsgTitle(msg).playerName + ":" }}</span>
                   </div>
                   <div class="message-content" :style="{ color: msg.fontColor, fontSize: msg.fontSize }">
-                    {{ msg.messageContent }}
+                    <template v-for="(part, i) in splitMessage(msg.messageContent)" :key="i">
+                      <!-- 处理 `>>数字 ` 部分 -->
+                      <el-tooltip v-if="part.type === 'prefix'" effect="dark" placement="top"
+                        :content="getMessageByIndex(part.index)">
+                        <template #content>
+                          <div :style="{ whiteSpace: 'pre-line', maxWidth: '500px' }"
+                            v-html="getMessageByIndex(part.index)"></div>
+                        </template>
+                        <span :style="{ color: 'blue' }">
+                          {{ part.text }}
+                        </span>
+                      </el-tooltip>
+
+                      <!-- 普通文本 -->
+                      <span v-else>{{ part.text }}</span>
+                    </template>
                   </div>
-                  <div class="message-time" :style="{ fontSize: '10px', userSelect: 'none' }">
+                  <div :style="{ userSelect: 'none', cursor: 'pointer' }" @click="MessageIndexClick(msg.messageIndex)">
+                    {{ "|" + msg.messageIndex + "|" }}
+                  </div>
+                  <div class="message-time">
                     {{ msg.messageTime }}
                   </div>
                 </div>
@@ -136,31 +209,37 @@
         </el-col>
 
         <!-- 在线人数列表 -->
-        <el-col :span="6" class="online-users-section">
+        <el-col :xs="0" :sm="6" :md="6" class="online-users-section">
           <el-card class="online-users-card" shadow="always">
             <div class="scroll-container">
               <el-row>
-                <el-col v-for="(user, index) in room.players" :key="index" :span="12">
-                  <el-card shadow="hover" class="player-card">
+                <el-col v-for="(forPlayer, index) in sortedPlayers" :key="index" :span="12">
+                  <el-card shadow="hover" class="player-card" :body-style="{ padding: '7px', backgroundColor:forPlayer.isAlive ? 'white' : 'grey'}">
                     <div class="player-container">
-                      <!-- 头像 -->
-                      <el-avatar :src="defaultAvatar" size="50" shape="square" class="player-avatar" />
+                      <!-- 用于显示该玩家的所有发言 -->
+                      <el-avatar
+                        :src="forPlayer.iconUrl ? `${server_url}/static${forPlayer.iconUrl}` : `${server_url}/static/defaultIcon.png`"
+                        shape="square" class="player-avatar" :class="{ 'grayscale': !forPlayer.isAlive }"
+                        @click="togglePlayerMessages(forPlayer)" />
                       <!-- 玩家信息 -->
                       <div class="player-info">
                         <template v-if="isRoomCreator || gameEnd == true && room">
-                          <router-link :to="{ name: 'UserProfile', params: { userId: user.userId } }" class="user-link">
-                            {{ user.name }}
+                          <router-link :to="{ name: 'UserProfile', params: { userId: forPlayer.userId } }"
+                            class="user-link">
+                            {{ forPlayer.name }}
                           </router-link>
                         </template>
                         <template v-else>
-                          <span class="user-link">{{ user.name }}</span>
+                          <span class="user-link">{{ forPlayer.name }}</span>
                         </template>
-                        <span v-if="!user.isAlive">[死亡]</span>
+                        <span v-if="!forPlayer.isAlive">[死亡]</span>
+                        <span v-if="forPlayer?.userId == room?.roomCreatorId && room.gameSettings.gmMode">[GM]</span>
+
                         <div class="player-status">
-                          <span v-if="user.isReady && gameState == '' && !gameEnd">[Ready]</span>
+                          <span v-if="forPlayer.isReady && gameState == '' && !gameEnd">[Ready]</span>
                           <span v-if="GM_IdentityRoom?.players">
                             {{GM_IdentityRoom.players.find(player => player.roomPlayerId ===
-                              user.roomPlayerId)?.identity?.name
+                              forPlayer.roomPlayerId)?.identity?.name
                               || ""}}
                           </span>
                         </div>
@@ -172,7 +251,6 @@
             </div>
           </el-card>
         </el-col>
-
       </el-row>
 
       <!-- 输入框 -->
@@ -180,7 +258,7 @@
         <el-card class="enter-card" shadow="always">
           <div class="control-panel">
             <!-- 固定颜色选择器 -->
-            <el-select v-model="fontColor" placeholder="选择颜色" class="color-selector">
+            <el-select v-model="fontColor" placeholder="选择颜色" :style="{ width: isMobile ? '50%' : 'auto' }">
               <el-option label="默认" value="default"></el-option>
               <el-option label="黑色" value="#000000"></el-option>
               <el-option label="红色" value="#ff0000"></el-option>
@@ -190,7 +268,7 @@
             </el-select>
 
             <!-- 字号选择器 -->
-            <el-select v-model="fontSize" placeholder="字体大小" class="font-size-selector">
+            <el-select v-model="fontSize" placeholder="字体大小" :style="{ width: isMobile ? '50%' : 'auto' }">
               <el-option label="12px" value="12px"></el-option>
               <el-option label="14px" value="14px"></el-option>
               <el-option label="16px" value="16px"></el-option>
@@ -199,15 +277,17 @@
             </el-select>
 
             <!-- 频道选择器 -->
-            <el-select v-model="nowSendChannel" placeholder="发言种类" class="font-size-selector">
+            <el-select v-model="nowSendChannel" placeholder="发言种类" :style="{ width: isMobile ? '50%' : 'auto' }">
               <el-option v-for="channel in filteredChannels" :key="channel.value" :label="channel.label"
                 :value="channel.value"></el-option>
             </el-select>
 
             <!-- 占卜 -->
             <el-tag v-if="needUranai" class="uranai-tag">选择需要占卜的对象</el-tag>
-            <el-select v-if="needUranai" v-model="nowSelectPlayer" placeholder="占卜师的行动" class="font-size-selector">
-              <el-option v-if="needUranai" v-for="player in room.players?.filter(player => player.isAlive == true)"
+            <el-select v-if="needUranai" v-model="nowSelectPlayer" placeholder="占卜师的行动"
+              :style="{ width: isMobile ? '50%' : 'auto' }">
+              <el-option v-if="needUranai"
+                v-for="player in room.players?.filter(player => room?.gameSettings?.gmMode ? player.userId != room.roomCreatorId && player.isAlive == true : player.isAlive)"
                 :key="player.roomPlayerId" :label="player.name" :value="player.roomPlayerId"></el-option>
             </el-select>
             <el-button v-if="needUranai" type="primary"
@@ -215,8 +295,10 @@
 
             <!-- 猎人 -->
             <el-tag v-if="needKariudo" class="uranai-tag">选择需要守护的对象</el-tag>
-            <el-select v-if="needKariudo" v-model="nowSelectPlayer" placeholder="猎人的行动" class="font-size-selector">
-              <el-option v-if="needKariudo" v-for="player in room.players?.filter(player => player.isAlive == true)"
+            <el-select v-if="needKariudo" v-model="nowSelectPlayer" placeholder="猎人的行动"
+              :style="{ width: isMobile ? '50%' : 'auto' }">
+              <el-option v-if="needKariudo"
+                v-for="player in room.players?.filter(player => room?.gameSettings?.gmMode ? player.userId != room.roomCreatorId && player.isAlive == true : player.isAlive)"
                 :key="player.roomPlayerId" :label="player.name" :value="player.roomPlayerId"></el-option>
             </el-select>
             <el-button v-if="needKariudo" type="primary"
@@ -224,8 +306,10 @@
 
             <!-- 投票 -->
             <el-tag v-if="needVote" class="uranai-tag">选择需要投票的对象</el-tag>
-            <el-select v-if="needVote" v-model="nowSelectPlayer" placeholder="请投票" class="font-size-selector">
-              <el-option v-if="needVote" v-for="player in room.players?.filter(player => player.isAlive == true)"
+            <el-select v-if="needVote" v-model="nowSelectPlayer" placeholder="请投票"
+              :style="{ width: isMobile ? '50%' : 'auto' }">
+              <el-option v-if="needVote"
+                v-for="player in room.players?.filter(player => room?.gameSettings?.gmMode ? player.userId != room.roomCreatorId && player.isAlive == true : player.isAlive)"
                 :key="player.roomPlayerId" :label="player.name" :value="player.roomPlayerId"></el-option>
             </el-select>
             <el-button v-if="needVote" type="primary"
@@ -233,15 +317,17 @@
 
             <!-- 狼咬 -->
             <el-tag v-if="needKami" type="danger" class="uranai-tag">选择需要咬的对象</el-tag>
-            <el-select v-if="needKami" v-model="nowSelectPlayer" placeholder="确定狼咬对象" class="font-size-selector">
-              <el-option v-if="needKami" v-for="player in room.players?.filter(player => player.isAlive == true)"
+            <el-select v-if="needKami" v-model="nowSelectPlayer" placeholder="确定狼咬对象"
+              :style="{ width: isMobile ? '50%' : 'auto' }">
+              <el-option v-if="needKami"
+                v-for="player in room.players?.filter(player => room?.gameSettings?.gmMode ? player.userId != room.roomCreatorId && player.isAlive == true : player.isAlive)"
                 :key="player.roomPlayerId" :label="player.name" :value="player.roomPlayerId"></el-option>
             </el-select>
             <el-button v-if="needKami" type="danger"
               @click="sendGameActionBody(ConstConfig.GAME_ACTION_KAMI)">确定行动</el-button>
 
             <el-select v-if="gameState !== '' && isRoomCreator && gameEnd != true && identityName == 'GM'"
-              v-model="nowSelectPlayer" placeholder="游戏管理" class="font-size-selector">
+              v-model="nowSelectPlayer" placeholder="游戏管理" :style="{ width: isMobile ? '50%' : 'auto' }">
               <el-option v-if="gameState !== '' && isRoomCreator && gameEnd != true && identityName == 'GM'"
                 v-for="player in GM_IdentityRoom.players?.filter(player => player.identity.name != 'GM')"
                 :key="player.roomPlayerId" :label="player.name" :value="player.roomPlayerId"></el-option>
@@ -268,10 +354,10 @@
       </el-row>
 
       <!-- 职业数量控制表单 -->
-      <el-dialog v-model="GameSettingVisible" title="设置职业数量">
+      <el-dialog v-model="GameSettingVisible" title="设置职业数量" width="65vw">
         <el-form :model="GameSettingForm">
           <el-row>
-            <el-col :span="12">
+            <el-col :span="24">
               <el-form-item label="人狼数量">
                 <el-input-number v-model="GameSettingForm.jinrouCount" :min="0" label="人狼数量" />
               </el-form-item>
@@ -333,7 +419,6 @@
                 </el-radio-group>
               </el-form-item>
 
-
               <el-form-item label="希望役职制">
                 <el-radio-group v-model="GameSettingForm.isHopeMode">
                   <el-radio :label="false">普通</el-radio>
@@ -373,9 +458,6 @@
               </el-form-item>
 
 
-            </el-col>
-
-            <el-col :span="12">
               <el-form-item label="选择默认配置">
                 <el-select v-model="selectedConfig" placeholder="选择一个配置" @change="applySelectedConfig(selectedConfig)">
                   <el-option label="默认配置" value="default" />
@@ -399,20 +481,48 @@
 
       <!-- 加入名字弹窗 -->
       <el-dialog v-model="PlayerNameVisible" title="匿名名称"
-        @keydown.enter.prevent="JoinRoom(roomId, user.userId, PlayerNameForm.playerName)">
+        @keydown.enter.prevent="JoinRoom(roomId, user.userId, PlayerNameForm.playerName, PlayerNameForm.iconUrl)"
+        width="80vw">
         <el-form :model="PlayerNameForm">
           <el-form-item label="名称">
             <el-input v-model="PlayerNameForm.playerName" autocomplete="off" />
           </el-form-item>
+          <div class="m-4">
+            <p>选择头像</p>
+            <el-cascader v-model="selectedIcon" :options="iconUrls" :style="{ width: isMobile ? '100%' : 'auto' }" :props="{
+              expandTrigger: 'hover'
+
+            }" />
+            <el-button @click="selectRandomIcon">在该子主题中随机选择头像</el-button>
+          </div>
+          <!-- 头像预览 -->
+          <el-avatar :src="`${server_url}/static${PlayerNameForm.iconUrl}`" size="50" shape="square" />
         </el-form>
         <template #footer>
           <div class="dialog-footer">
             <el-button @click="PlayerNameVisible = false">取消</el-button>
-            <el-button type="primary" @click="JoinRoom(roomId, user.userId, PlayerNameForm.playerName)">
+            <el-button type="primary"
+              @click="JoinRoom(roomId, user.userId, PlayerNameForm.playerName, PlayerNameForm.iconUrl)">
               加入
             </el-button>
           </div>
         </template>
+      </el-dialog>
+
+      <!-- 统一的消息弹窗 -->
+      <el-dialog v-model="messagesDialogVisible" :title="messagesCurrentPlayer?.name + ' 的发言记录'" width="60vw">
+        <div class="messages-list">
+          <div v-for="(msg, index) in currentMessages" :key="index" class="message-item">
+            <div class="message-line">
+              <!-- 索引部分 -->
+              <div class="message-index-container">
+                <span>[{{ msg.messageIndex }}]{{ msg.playerName }}:&nbsp</span>
+              </div>
+              <!-- 内容部分 -->
+              <div class="message-content">{{ msg.messageContent }}</div>
+            </div>
+          </div>
+        </div>
       </el-dialog>
     </div>
   </div>
@@ -425,9 +535,10 @@ import { useRouter, useRoute } from 'vue-router';
 import { useStore } from '@/stores';
 import { format } from 'date-fns';
 import { get, post } from '@/net';
-import { preGameSettings } from '@/js/gameconfig';
+import { preGameSettings, iconUrls } from '@/js/gameconfig';
 import * as ConstConfig from '@/js/constant.js';
-
+import { server_url } from '../net';
+import { checkMobile } from '@/js/base.js';
 
 const fontColor = ref(''); // 默认黑色
 const fontSize = ref('14px'); // 默认 14px
@@ -482,7 +593,7 @@ var needKami = ref(false);
 var nowSelectPlayer = ref('');
 var GM_IdentityRoom = ref(''); //给GM存储场上职业的对象
 var partners = ref();
-
+var selectedIcon = ref('');
 var channels = ref([
   { label: '全体发言', value: 'ALL' },
   { label: '观战发言', value: 'WATCHTALK' },
@@ -493,6 +604,13 @@ var channels = ref([
   { label: '妖狐的对话', value: 'KITSUNETALK' },
   { label: '灵界对话', value: 'UNDERTALK' }
 ]);
+
+// 弹窗控制
+const messagesDialogVisible = ref(false)
+// 当前选中玩家
+const messagesCurrentPlayer = ref(null)
+const showUsersDrawer = ref(false)
+const isMobile = ref();
 
 // 处理 Enter 和 Shift+Enter
 const handleEnterKey = (event) => {
@@ -525,7 +643,8 @@ const GameSettingForm = ref({
 })
 
 const PlayerNameForm = ref({
-  playerName: ''
+  playerName: '',
+  iconUrl: ''
 })
 // 发送消息
 const sendMessage = () => {
@@ -561,6 +680,8 @@ const sendMessage = () => {
 
 // 生命周期钩子，调用websocket服务组件初始化连接和订阅
 onMounted(() => {
+  isMobile.value = checkMobile()
+  window.addEventListener('resize', checkMobile)
   // 创建一个等待 WebSocketManager 连接成功的函数
   const waitForConnection = () => {
     return new Promise((resolve) => {
@@ -629,6 +750,7 @@ onMounted(() => {
 
 // socket连接关闭时取消订阅
 onUnmounted(() => {
+  window.removeEventListener('resize', checkMobile)
   GAME_SYSTEM_CHANNEL.value.forEach((channel) => {
     const topic = `/topic/room/${roomId.value}/${channel}`;
     WebSocketManager.unsubscribe(topic);
@@ -664,11 +786,6 @@ watch(GAME_SYSTEM_CHANNEL, (NEW_GAME_SYSTEM_CHANNEL, OLD_GAME_SYSTEM_CHANNEL) =>
   });
 });
 
-// 监听 times 的变化
-watch(times, (newVal) => {
-
-});
-
 // 消息显示与滚动的处理函数
 const handleReceivedMessage = (receivedData) => {
   // 显示聊天消息
@@ -691,9 +808,13 @@ const handleGameActionBody = (receivedData) => {
 };
 
 //加入房间
-function JoinRoom(roomId, userId, name) {
-  if (name.length > 8) {
-    ElMessage.error(`名字长度不可超过8字符`);
+function JoinRoom(roomId, userId, name, iconUrl) {
+  if (name.length > 10) {
+    ElMessage.error(`名字长度不可超过10字符`);
+    return;
+  }
+  if (name.length == 0) {
+    ElMessage.error(`名字长度不可为空`);
     return;
   }
   playerName.value = name;
@@ -701,7 +822,8 @@ function JoinRoom(roomId, userId, name) {
     post(`/api/rooms/joinRoom`, {
       roomId: roomId,
       userId: userId,
-      name: name
+      name: name,
+      iconUrl: iconUrl
     }, (response) => {
       const { data } = response;
       const { message } = response;
@@ -822,7 +944,7 @@ function applySelectedConfig(value) {
 
   if (selectedConfig.value != null) {
     // 使用 Object.assign 将配置值更新到 GameSettingForm 中
-    Object.assign(this.GameSettingForm, selectedConfig.value);
+    Object.assign(GameSettingForm.value, selectedConfig.value);
   }
 }
 
@@ -1055,10 +1177,10 @@ function roomRefresh(gameActionBody) {
         backgroundColorGameState.value = "#c2a152";
         break;
       case null:
-        backgroundColorGameState.value = "#ffffff";
+        backgroundColorGameState.value = "#ffa01e";
         break;
       case undefined:
-        backgroundColorGameState.value = "#ffffff";
+        backgroundColorGameState.value = "#ffa01e";
         break;
     }
     if (player?.value?.isAlive == false) {
@@ -1209,7 +1331,7 @@ function roomRefresh(gameActionBody) {
           GAME_SENDVALIABLE_CHANNEL.value = ["DAYTALK", "SELFTALK"];
           nowSendChannel.value = GAME_SENDVALIABLE_CHANNEL.value.includes(nowSendChannel) ? nowSendChannel.value : "DAYTALK";
         } else if (gameActionBody.dayOrNightOrVote == "NIGHT") {
-          GAME_SENDVALIABLE_CHANNEL.value = ["KITSUNETALK"];
+          GAME_SENDVALIABLE_CHANNEL.value = ["KITSUNETALK", "SELFTALK"];
           nowSendChannel.value = GAME_SENDVALIABLE_CHANNEL.value.includes(nowSendChannel) ? nowSendChannel.value : "KITSUNETALK";
         } else if (gameActionBody.dayOrNightOrVote == "VOTING") {
           GAME_SENDVALIABLE_CHANNEL.value = ["SELFTALK"];
@@ -1310,29 +1432,36 @@ const doReady = async (doOrCancel) => {
   }
 };
 
-function getMessageClass(messageType) {
-  switch (messageType) {
-    case 'SYSTEM':
-      return 'SYSTEM';
-    case 'ALL':
-      return 'ALL';
-    case 'DAYTALK':
-      return 'DAYTALK';
-    case 'WOLFTALK':
-      return 'WOLFTALK';
-    case 'KYOUYUUTALK':
-      return 'KYOUYUUTALK';
-    case 'KITSUNETALK':
-      return 'KITSUNETALK';
-    case 'WATCHTALK':
-      return 'WATCHTALK';
-    case 'SELFTALK':
-      return 'SELFTALK';
-  }
-}
+
 
 function getRoomState() {
-  if (room.value != null || room.value != undefined) {
+  var state = "";
+  if (gameState.value != "") {
+    //游戏进行中
+    state = "第" + dayNum.value + "天-";
+    switch (gameState.value) {
+      case "DAY":
+        state = state + "白天";
+        break
+      case "NIGHT":
+        state = state + "夜晚";
+        break;
+      case "VOTING":
+        state = state + "投票";
+        break;
+      case "SUSPEND":
+        state = state + "投票-犹豫";
+        break;
+      case "SILENT":
+        state = state + "白天-禁言";
+        break;
+      case "MORNING":
+        state = state + "黎明";
+        break;
+    }
+    return state;
+  } else {
+    //游戏未进行
     switch (room.value.roomState) {
       case 'NORMAL':
         return '开始前';
@@ -1340,19 +1469,8 @@ function getRoomState() {
         return '已结束';
       case 'DISCARDED':
         return '已废村';
-      case 'WOLFTALK':
-        return 'WOLFTALK';
-      case 'KYOUYUUTALK':
-        return 'KYOUYUUTALK';
-      case 'KITSUNETALK':
-        return 'KITSUNETALK';
-      case 'WATCHTALK':
-        return 'WATCHTALK';
-      case 'SELFTALK':
-        return 'SELFTALK';
     }
   }
-
 }
 
 
@@ -1440,18 +1558,197 @@ const formattedIdentityListCount = computed(() => {
 
 function getMsgTitle(msg) {
   if (msg.messageType == "SELFTALK") {
-    if (msg.messageGmToPlayerId == player?.value?.roomPlayerId) {
+    if (msg.messageGmToPlayerId != null && msg.messageGmToPlayerId == player?.value?.roomPlayerId) {
       //是GM对自己的私聊
       msg.playerName = "GM->你"
-    } else if (msg.userId == player?.value?.userId) {
+    } else if (identityName.value == "GM" && msg.messageGmToPlayerId != null) {
       //自己是GM 发送给玩家
       var toPlayerName = room.value.players.find(player => player.roomPlayerId == msg.messageGmToPlayerId).name;
       msg.playerName = "你->" + toPlayerName;
     }
   }
+  // msg.messageGmToPlayerId ? msg.messageGmToPlayerId == player?.value?.roomPlayerId ? 'GM→你:' : msg.playerName + ":" : msg.messageType == 'SELFTALK' ? msg.playerName + ":" : msg.playerName + "的自言自语:"
   return msg;
-  msg.messageGmToPlayerId ? msg.messageGmToPlayerId == player?.value?.roomPlayerId ? 'GM→你:' : msg.playerName + ":" : msg.messageType == 'SELFTALK' ? msg.playerName + ":" : msg.playerName + "的自言自语:"
 }
+
+watch(selectedIcon, (newValue) => {
+  //更新
+  if (newValue.length > 0) {
+    // 查找完整路径的label
+    const fullPathLabel = findLabelByPath(newValue)
+    PlayerNameForm.value.playerName = fullPathLabel
+  }
+  PlayerNameForm.value.iconUrl = newValue.length
+    ? `/${newValue.join("/")}.png`
+    : "";
+
+});
+
+
+// 根据路径查找label的函数
+const findLabelByPath = (path) => {
+  if (!path || path.length === 0) return ''
+
+  let currentLevel = iconUrls
+  let resultLabel = ''
+
+  path.forEach((value, index) => {
+    const node = currentLevel.find(item => item.value === value)
+    if (node) {
+      resultLabel = node.label
+      if (node.children) {
+        currentLevel = node.children
+      }
+    }
+  })
+
+  return resultLabel
+}
+
+// 随机选择方法
+const selectRandomIcon = () => {
+  if (selectedIcon.value.length < 2) {
+    ElMessage.warning('请先选择角色分类')
+    return
+  }
+
+  const parentPath = selectedIcon.value.slice(0, -1)
+  const parentNode = parentPath.reduce((acc, currentValue) => {
+    const node = acc.find(item => item.value === currentValue)
+    return node?.children || []
+  }, iconUrls)
+
+  const validOptions = parentNode.filter(item => !item.children)
+  if (validOptions.length === 0) {
+    ElMessage.warning('当前分类没有可用头像')
+    return
+  }
+
+  const randomSelection = validOptions[Math.floor(Math.random() * validOptions.length)]
+  selectedIcon.value = [...parentPath, randomSelection.value]
+
+  // 自动设置名字
+  PlayerNameForm.playerName = randomSelection.label
+  PlayerNameForm.iconUrl = randomSelection.value
+}
+
+
+const sortedPlayers = computed(() => {
+  // 获取玩家列表
+  const players = room?.value?.players;
+  // 过滤后的玩家列表
+  var filteredPlayers = '';
+
+  if (!players) return []; // 如果没有玩家，返回空数组
+
+  if (room.value.gameSettings.gmMode && (gameState.value != '' || room.value.roomState == "ENDED")) {
+    //gmmode且游戏已开始，过滤掉房主
+    filteredPlayers = players.filter(player => player.userId !== room.value.roomCreatorId);
+  } else {
+    filteredPlayers = players;
+  }
+  // 对过滤后的玩家进行排序
+  return filteredPlayers.slice().sort((a, b) => {
+    if (a.isAlive && !b.isAlive) return -1; // a 在前
+    if (!a.isAlive && b.isAlive) return 1;  // b 在前
+    return 0; // 顺序不变
+  });
+});
+
+function getAlivePlayers(mode, state) {
+  var people = 0;
+  people = room.value.players.filter(player => player.isAlive).length
+  if (mode) {
+    //gm制
+    if (state != "" || room.value.roomState == "ENDED") {
+      //已开始
+      people = people - 1;
+    }
+  }
+  return people;
+}
+
+function getDiedPlayers(mode, state) {
+  var people = 0;
+  people = room.value.players.filter(player => !player.isAlive).length
+  return people;
+}
+
+// 计算属性，根据 identityName 返回对应的 type
+const identityColor = computed(() => {
+  switch (identityName.value) {
+    case '人狼':
+    case '狂人':
+    case '狂信者':
+    case '背德者':
+    case '妖狐':
+      return 'danger'; // 绿色
+    default:
+      return 'success'; // 默认灰色
+  }
+});
+
+function isGmMessage(msg) {
+  //判断该消息是不是gm发的
+  if (room?.value?.gameSettings?.gmMode && msg.userId == room.value.roomCreatorId) {
+    return true;
+  }
+  return false;
+}
+
+
+const MessageIndexClick = (messageIndex) => {
+  if (!messageContent.value.startsWith(">>")) {
+    messageContent.value = ">>" + messageIndex + messageContent.value + " "
+  } else {
+    // 如果已有前缀，保留后面的内容，更新前缀
+    const contentAfterPrefix = messageContent.value.split(' ', 2).slice(1).join(' ');  // 获取前缀后的内容
+    messageContent.value = ">>" + messageIndex + " " + contentAfterPrefix;
+  }
+
+};
+
+
+const splitMessage = (message) => {
+  const regex = /^>>(\d+)\s/;
+  const match = message.match(regex);
+  if (!match) {
+    // 没有匹配到特定前缀，整个作为普通文本处理
+    return [{ type: 'text', text: message }];
+  }
+
+  return [
+    { type: 'prefix', text: match[0], index: match[1] }, // ">>数字 " 部分
+    { type: 'text', text: message.slice(match[0].length) } // 剩余文本
+  ];
+};
+
+// 假设这个函数根据 messageIndex 获取对应消息
+const getMessageByIndex = (index) => {
+  var message = messages.value.find(message => message.messageIndex == index)
+  if (!message) {
+    return `未找到对应消息`
+  }
+  if (message.playerName) {
+    return `${message.playerName}: \n ${message.messageContent}`;
+  } else {
+    return `${message.messageContent}`;
+  }
+};
+
+
+// 头像点击处理
+const togglePlayerMessages = (player) => {
+  messagesCurrentPlayer.value = player
+  messagesDialogVisible.value = true
+}
+
+// 计算当前玩家的消息
+const currentMessages = computed(() => {
+  return messagesCurrentPlayer.value
+    ? messages.value.filter(message => message.playerName == messagesCurrentPlayer.value.name).slice() || []
+    : []
+})
 </script>
 
 <style scoped>
@@ -1459,12 +1756,12 @@ function getMsgTitle(msg) {
   display: flex;
   gap: 10px;
   /* 输入框与发送按钮的间距 */
+
 }
 
 .chat-room-container {
   width: 100%;
-  margin: 20px auto;
-
+  height: 100%;
 }
 
 .header-card {
@@ -1475,7 +1772,6 @@ function getMsgTitle(msg) {
 
 .main-content {
   margin-bottom: 20px;
-
   height: 100%;
 }
 
@@ -1496,7 +1792,7 @@ function getMsgTitle(msg) {
 }
 
 .message {
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid #000000;
 }
 
 .message:last-child {
@@ -1510,6 +1806,7 @@ function getMsgTitle(msg) {
   padding-bottom: 5px;
   padding-right: 10px;
   /* 让名字和内容顶部对齐 */
+  /* 超过宽度换行 */
 }
 
 .user {
@@ -1518,21 +1815,16 @@ function getMsgTitle(msg) {
   margin-right: 8px;
   /* 名字和内容的间距 */
   font-weight: bold;
-  color: #409eff;
+  color: #3386f3;
 }
 
-.content {
-  white-space: pre-wrap;
-  /* 保留换行符 */
-  word-break: break-word;
-  /* 长单词自动换行 */
-}
 
 
 .actions-section {
   display: flex;
   flex-direction: column;
   gap: 10px;
+
 }
 
 .input-section {
@@ -1543,8 +1835,8 @@ function getMsgTitle(msg) {
   /* 垂直排列 */
   gap: 10px;
   /* 控制器与输入框的间距 */
-}
 
+}
 
 .message-input {
   flex: 1;
@@ -1564,9 +1856,9 @@ function getMsgTitle(msg) {
 }
 
 .message-user {
-  flex: 1;
+
   /* 用户名占一部分宽度 */
-  max-width: 130px;
+  width: 100px;
   /* 用户名的最大宽度 */
   word-wrap: break-word;
   /* 超过宽度换行 */
@@ -1579,11 +1871,20 @@ function getMsgTitle(msg) {
 }
 
 .message-content {
+  width: 0px;
   white-space: pre-wrap;
   flex: 3;
   /* 消息内容占较大宽度 */
   padding-left: 5px;
   word-wrap: break-word;
+  overflow-wrap: break-word;
+  /* 强制单词换行，避免英文和数字不换行 */
+}
+
+/* 管理员消息样式 */
+.message-line.gm-message {
+  background-color: #d888f8 !important;
+  color: #000000 !important;
 }
 
 .message-line.SYSTEM {
@@ -1596,11 +1897,21 @@ function getMsgTitle(msg) {
 }
 
 .message-line.DAYTALK {
-  background-color: #ffdd31;
+  background-color: #e6cc49;
 }
 
 .message-line.WOLFTALK {
   background-color: #13049f;
+  color: #ffffff;
+}
+
+.message-line.UNDERTALK {
+  background-color: #83b4c0;
+  color: #ffffff;
+}
+
+.message-line.KYOUYUUTALK {
+  background-color: #0c8444;
   color: #ffffff;
 }
 
@@ -1623,17 +1934,17 @@ function getMsgTitle(msg) {
   color: #ffefef;
 }
 
-.content {
-  flex-grow: 1;
-  /* 使内容区域自适应剩余空间 */
-  padding: 5px;
-  width: 100%;
-  height: 100%;
+.message-time {
+  font-size: 10px;
+  user-select: none;
+  flex-shrink: 0;
+  /* 防止时间被压缩 */
 }
+
 
 .player-container {
   align-items: center;
-  height: 80px;
+  min-height: 80px;
 }
 
 .scroll-container {
@@ -1642,5 +1953,34 @@ function getMsgTitle(msg) {
   /* 允许垂直滚动 */
   max-height: 60vh;
   /* 适当减少，留点空间避免溢出 */
+}
+
+.grayscale {
+  filter: grayscale(100%);
+  /* 完全变灰 */
+}
+
+.mobile-users-button {
+  position: fixed;
+  z-index: 9999;
+  /* 顶层显示 */
+  background: var(--el-color-primary);
+  color: white;
+  width: 48px;
+  height: 48px;
+  right: 20px;
+  /* 距离右侧 20px */
+  top: 40px;
+  /* 距离底部 20px */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid white;
+  /* 添加白色边框 */
+  cursor: pointer;
+}
+
+.died-card {
+  background-color: #000000;
 }
 </style>

@@ -10,14 +10,12 @@
       <!-- 筛选和操作按钮 -->
       <el-col class="filters-section">
         <el-card class="filters-card" shadow="always">
-          <div class="filters">
             <el-button type="primary" @click="changeFilterState('NORMAL')">募集中的村</el-button>
             <el-button type="primary" @click="changeFilterState('OLD')">陈旧村</el-button>
             <el-button type="primary" @click="changeFilterState('PLAYING')">进行中的村</el-button>
             <el-button type="primary" @click="changeFilterState('ENDED')">已结束LOG</el-button>
             <el-button type="primary" @click="changeFilterState('DISCARDED')">废村LOG</el-button>
             <el-button type="success" @click="dialogFormVisible = true">建立村子</el-button>
-          </div>
         </el-card>
       </el-col>
 
@@ -33,18 +31,19 @@
                     <div class="room-no">#{{ room.roomId }}</div>
                     {{ room.roomTitle }}
                     <el-tooltip :content="room.isLocked ? '有密码' : '无密码'" placement="top">
-                      <el-icon v-if="room.isLocked">
+                      <el-icon v-if="room.isLocked"  size="30">
                         <Lock />
                       </el-icon>
-                      <el-icon v-else>
+                      <el-icon v-else  size="30">
                         <Unlock />
                       </el-icon>
                     </el-tooltip>
 
                     <el-tooltip
                       :content="room.isAnonymous === 'WEAK' ? '弱匿名' : room.isAnonymous === 'STRONG' ? '强匿名' : '不匿名'"
-                      placement="top">
-                      <el-icon>
+                      placement="top"
+                      >
+                      <el-icon size="30">
                         <component
                           :is="room.isAnonymous === 'WEAK' || room.isAnonymous === 'STRONG' ? 'Avatar' : 'User'" />
                       </el-icon>
@@ -56,10 +55,12 @@
                           {{ room.villageRule }}
                         </div>
                       </template>
-                      <el-icon>
+                      <el-icon size="30">
                         <List />
                       </el-icon>
                     </el-tooltip>
+
+                    <span :style="{ color: 'red' }">（ {{ room.playerCount }} 人）</span>
                   </h2>
                   <p class="room-description">{{ room.roomDescription }}</p>
                   <p class="room-roomCreateTime">{{ room.roomCreateTime }}</p>
@@ -80,15 +81,15 @@
 
 
     <!-- 创建房间弹窗 -->
-    <el-dialog v-model="dialogFormVisible" title="建立村子">
+    <el-dialog v-model="dialogFormVisible" title="建立村子" width="65vw">
       <el-form :model="form">
-        <el-form-item label="村子名称" :label-width="formLabelWidth">
+        <el-form-item label="村子名称" >
           <el-input v-model="form.roomTitle" autocomplete="off" />
         </el-form-item>
-        <el-form-item label="村子描述" :label-width="formLabelWidth">
+        <el-form-item label="村子描述">
           <el-input v-model="form.roomDescription" autocomplete="off" />
         </el-form-item>
-        <el-form-item label="是否匿名" :label-width="formLabelWidth">
+        <!-- <el-form-item label="是否匿名" :label-width="formLabelWidth">
           <el-select v-model="form.isAnonymous" placeholder="请选择匿名程度">
             <el-option label="强匿名" value="STRONG" />
             <el-option label="弱匿名" value="WEAK" />
@@ -100,12 +101,12 @@
             <el-option label="无密码" value="FALSE" />
             <el-option label="有密码" value="TRUE" />
           </el-select>
-        </el-form-item>
+        </el-form-item> -->
         <!-- 动态显示密码输入框 -->
-        <el-form-item v-if="form.isLocked === 'TRUE'" label="设置密码" :label-width="formLabelWidth">
+        <!-- <el-form-item v-if="form.isLocked === 'TRUE'" label="设置密码" :label-width="formLabelWidth">
           <el-input v-model="form.roomPassword" type="password" placeholder="请输入密码" autocomplete="off" />
-        </el-form-item>
-        <el-form-item label="村规" :label-width="formLabelWidth">
+        </el-form-item> -->
+        <el-form-item label="村规" >
           <el-input v-model="form.villageRule" type="textarea" />
         </el-form-item>
       </el-form>
@@ -304,7 +305,6 @@ const joinRoom = (roomId) => {
 }
 
 .filters {
-  display: flex;
   gap: 10px;
   align-items: center;
 }

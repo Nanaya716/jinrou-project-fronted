@@ -2,15 +2,9 @@ import axios from "axios";
 import { ElMessage } from "element-plus";
 import { getActivePinia } from 'pinia'; // 获取 Pinia 实例
 
-const defaultError = (err) => ElMessage.error('发生了一些错误，请联系管理员:'+err.message);
+const defaultError = (err) => ElMessage.error('错误:'+err.message);
 const defaultFailure = (failure) => ElMessage.warning('失败：'+failure.message);
-
-// 获取 Token 的工具方法
-// function getToken(store) {
-//     return store.auth.token;
-// }
-
-
+export const server_url = ""
 // 获取当前 Pinia 中的 store
 function getToken() {
   const pinia = getActivePinia();
@@ -26,7 +20,7 @@ var token = getToken();
 
 // 创建 Axios 实例并设置默认配置
 const axiosInstance = axios.create({
-    baseURL: '/', // 使用根路径
+    baseURL: server_url, // 使用根路径
     withCredentials: true, // 允许跨域请求携带 Cookies
 });
 

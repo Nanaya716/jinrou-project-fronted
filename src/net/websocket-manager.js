@@ -2,6 +2,7 @@
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client/dist/sockjs.min.js';
 import { getActivePinia } from 'pinia'; // 获取 Pinia 实例
+import { server_url } from '.';
 
 class WebSocketManager {
   constructor() {
@@ -31,7 +32,7 @@ class WebSocketManager {
     }
 
     this.client = new Client({
-      webSocketFactory: () => new SockJS(`/api/wsConnect?token=${this.token}`), // 使用 SockJS 创建 WebSocket 连接
+      webSocketFactory: () => new SockJS(`${server_url}/api/wsConnect?token=${this.token}`), // 使用 SockJS 创建 WebSocket 连接
       connectHeaders: {
         Authorization: `Bearer ${this.token}`,
       },

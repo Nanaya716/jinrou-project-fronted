@@ -1,6 +1,6 @@
 <template>
   <el-aside width="200px">
-    <el-scrollbar class="scrollbar">
+    <el-scrollbar class="sidebar">
       <el-menu
         :default-active="activeMenu"
         :default-openeds="openMenus"
@@ -26,10 +26,7 @@
           <el-menu-item index="/villageHistory">战绩统计</el-menu-item>
           <el-menu-item index="/about">关于</el-menu-item>
         </el-sub-menu>
-        <div>
-            <el-button @click="logout" type="danger" plain>退出登录</el-button>
-        </div>
-          
+        <el-menu-item @click="logout">退出登录</el-menu-item>
       </el-menu>
     </el-scrollbar>
   </el-aside>
@@ -65,7 +62,13 @@ const activeMenu = ref(route.path);
 
 // 保存展开的子菜单
 const openMenus = ref([]);
-
+// 接收父组件传递
+defineProps({
+  width: {
+    type: String,
+    default: '200px',
+  },
+});
 // 监听路由变化，更新 activeMenu 和展开的菜单
 watch(
   () => route.path,
@@ -122,7 +125,13 @@ const logout = () => {
   width: 100%;
 }   
 
-.scrollbar{
-  height:100%;
+.sidebar {
+  height: 100vh;
+  overflow: hidden;
+  transition: width 0.3s; /* 添加过渡效果 */
+}
+
+.sidebar-menu {
+  border-right: none;
 }
 </style>

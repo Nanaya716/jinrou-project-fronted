@@ -1,18 +1,18 @@
 <template>
     <div style="width: 100vw;height: 100vh;overflow: hidden;display: flex">
-        <div style="flex: 1">
+        <div v-if="!isMobile" style ="flex: 1">
             <el-image style="width: 100%;height: 100%" fit="cover"
-                      src="https://img1.baidu.com/it/u=4097856652,4033702227&fm=253&fmt=auto&app=120&f=JPEG?w=1422&h=800"/>
+                src="/image.jpg" />
         </div>
         <div class="welcome-title">
             <div style="font-size: 30px;font-weight: bold">人狼平台</div>
-            <div style="margin-top: 10px">人狼平台</div>
-            <div style="margin-top: 5px">人狼平台</div>
+            <!-- <div style="margin-top: 10px">人狼平台</div>
+            <div style="margin-top: 5px">人狼平台</div> -->
         </div>
         <div style="width: 400px;background-color: white;z-index: 1">
             <router-view v-slot="{ Component }">
                 <transition name="el-fade-in-linear" mode="out-in">
-                    <component :is="Component" style="height: 100%"/>
+                    <component :is="Component" style="height: 100%" />
                 </transition>
             </router-view>
         </div>
@@ -20,7 +20,17 @@
 </template>
 
 <script setup>
+import { checkMobile } from '@/js/base.js';
+import { ref, provide, onMounted, onUnmounted } from 'vue';
+const isMobile = ref(true);
+onMounted(() => {
+    isMobile.value = checkMobile()
+    window.addEventListener('resize', checkMobile)
+});
 
+onUnmounted(() => {
+    window.removeEventListener('resize', checkMobile)
+});
 </script>
 
 <style scoped>

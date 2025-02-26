@@ -66,7 +66,7 @@ const router = createRouter({
           path: '/villageHistory',
           name: 'villageHistory',
           component: () => import('@/views/villageHistory.vue'),
-          meta: { title: '历史' },
+          meta: { title: '战绩历史' },
         },
         {
           path: '/about',
@@ -96,7 +96,7 @@ router.beforeEach((to, from, next) => {
   else if (store.auth.user == null && !to.name.startsWith('welcome-')) {
     next('/welcome')
   } else {
-    document.title = to.meta.title || '默认标题'; // 如果没有设置 meta.title，则使用默认标题
+    document.title = to.meta.title || '人狼平台'; // 如果没有设置 meta.title，则使用默认标题
     // 如果是 'room' 页面，使用 roomId 动态设置标题
     if (to.name === 'room' && to.params.roomId) {
       var title = `人狼平台-村子#${to.params.roomId}`; // 将 roomId 加入标题中
