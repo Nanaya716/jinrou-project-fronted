@@ -1,17 +1,24 @@
-<!-- Footer.vue -->
 <template>
-  <el-footer class="footer">
-    版权信息
-  </el-footer>
+    <div class="footer-content">
+      <el-link href="https://beian.miit.gov.cn" target="_blank">渝ICP备2025052480号-1</el-link>
+    </div>
 </template>
 
 <script setup>
 </script>
 
 <style scoped>
-.footer {
+.footer-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.footer-content {
+  margin-top: auto; /* 将 footer 推到容器底部 */
+  padding-top: 30px;
   text-align: center;
-  padding: 10px;
-  background-color: red;
+  color: gray;
+  font-size: 12px;
+
 }
 </style>

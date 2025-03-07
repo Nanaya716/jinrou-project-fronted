@@ -72,9 +72,13 @@
                 <div style="margin-top: 70px">
                     <el-button @click="doReset()" style="width: 270px;" type="danger" plain>立即重置密码</el-button>
                 </div>
+                
             </div>
+            
         </transition>
+        <Footer/>
     </div>
+
 </template>
 
 <script setup>

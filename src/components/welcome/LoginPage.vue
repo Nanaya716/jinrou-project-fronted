@@ -38,6 +38,7 @@
                 <el-button style="width: 270px" @click="router.push('/register')" type="warning" plain>注册账号</el-button>
             </div>
         </div>
+        <Footer/>
     </div>
 
 </template>

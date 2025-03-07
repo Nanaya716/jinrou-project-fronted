@@ -90,10 +90,12 @@ router.beforeEach((to, from, next) => {
 
   // 检查 store.auth.user 是否存在且不为 null，并且试图访问登陆页，则重定向到主页
   if (store.auth.user && to.name.startsWith('welcome-')) {
+    console.log("到主页")
     next('/')
   }
   // 检查 store.auth.user 是否存在且为 null，并且试图访问主页，则重定向到登陆页
   else if (store.auth.user == null && !to.name.startsWith('welcome-')) {
+    console.log("到登录页")
     next('/welcome')
   } else {
     document.title = to.meta.title || '人狼平台'; // 如果没有设置 meta.title，则使用默认标题

@@ -67,6 +67,7 @@
             <span style="font-size: 14px;line-height: 15px;color: grey">已有账号? </span>
             <el-link type="primary" style="translate: 0 -2px" @click="router.push('/')">立即登录</el-link>
         </div>
+        <Footer/>
     </div>
 </template>
 
@@ -97,13 +98,13 @@ const validateAccount = (rule, value, callback) => {
 };
 
 const validateUsername = (rule, value, callback) => {
-    if (value === '') {
-        callback(new Error('用户名不能为空')); // 空值提示
-    } else if (!/^[\u4e00-\u9fa5a-zA-Z]{1,8}$/.test(value)) { // 支持中文和英文，最大 8 个中文字符
-        callback(new Error('用户名最多支持 8 个中文字符或 16 个英文字符'));
-    } else {
-        callback(); // 校验通过
-    }
+  if (value === '') {
+    callback(new Error('用户名不能为空')); // 空值提示
+  } else if (value.length < 1 || value.length > 8) { // 限制长度为 1 到 8 个字符
+    callback(new Error('用户名长度必须为 1 到 8 个字符'));
+  } else {
+    callback(); // 校验通过
+  }
 };
 
 const validatePassword = (rule, value, callback) => {

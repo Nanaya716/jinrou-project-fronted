@@ -5,9 +5,9 @@
                 src="/image.jpg" />
         </div>
         <div class="welcome-title">
-            <div style="font-size: 30px;font-weight: bold">人狼平台</div>
-            <!-- <div style="margin-top: 10px">人狼平台</div>
-            <div style="margin-top: 5px">人狼平台</div> -->
+            <div style="font-size: 30px;font-weight: bold">月夜人狼平台</div>
+            <!-- <div style="margin-top: 10px"></div> -->
+            <div style="margin-top: 5px">实时对话・高自由度的人狼服务器</div>
         </div>
         <div style="width: 400px;background-color: white;z-index: 1">
             <router-view v-slot="{ Component }">

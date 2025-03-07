@@ -93,8 +93,8 @@ const passwordFormRef = ref(null);
 const validateUsername = (rule, value, callback) => {
   if (value === '') {
     callback(new Error('用户名不能为空')); // 空值提示
-  } else if (!/^[\u4e00-\u9fa5a-zA-Z]{1,8}$/.test(value)) { // 支持中文和英文，最大 8 个中文字符
-    callback(new Error('用户名最多支持 8 个中文字符或 16 个英文字符'));
+  } else if (value.length < 1 || value.length > 8) { // 限制长度为 1 到 8 个字符
+    callback(new Error('用户名长度必须为 1 到 8 个字符'));
   } else {
     callback(); // 校验通过
   }
@@ -172,7 +172,6 @@ const showPasswordDialog = () => {
 
 // 提交密码修改
 const submitPasswordChange = () => {
-  console.log(passwordForm.value)
   passwordFormRef.value.validate((valid) => {
     if (valid) {
       post('/api/user/changePassword', passwordForm.value,

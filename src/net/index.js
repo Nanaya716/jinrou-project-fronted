@@ -4,7 +4,9 @@ import { getActivePinia } from 'pinia'; // 获取 Pinia 实例
 
 const defaultError = (err) => ElMessage.error('错误:'+err.message);
 const defaultFailure = (failure) => ElMessage.warning('失败：'+failure.message);
+// export const server_url = "http://localhost:8080"
 export const server_url = ""
+
 // 获取当前 Pinia 中的 store
 function getToken() {
   const pinia = getActivePinia();

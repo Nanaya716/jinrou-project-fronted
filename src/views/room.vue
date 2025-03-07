@@ -94,7 +94,8 @@
               <div class="scroll-container">
                 <el-row>
                   <el-col v-for="(forPlayer, index) in sortedPlayers" :key="index" :span="12">
-                    <el-card shadow="hover" :body-style="{ padding: '7px', backgroundColor:forPlayer.isAlive ? 'white' : 'grey'}">
+                    <el-card shadow="hover"
+                      :body-style="{ padding: '7px', backgroundColor: forPlayer.isAlive ? 'white' : 'grey' }">
                       <div class="player-container">
                         <!-- 用于显示该玩家的所有发言 -->
                         <el-avatar
@@ -214,7 +215,8 @@
             <div class="scroll-container">
               <el-row>
                 <el-col v-for="(forPlayer, index) in sortedPlayers" :key="index" :span="12">
-                  <el-card shadow="hover" class="player-card" :body-style="{ padding: '7px', backgroundColor:forPlayer.isAlive ? 'white' : 'grey'}">
+                  <el-card shadow="hover" class="player-card"
+                    :body-style="{ padding: '7px', backgroundColor: forPlayer.isAlive ? 'white' : 'grey' }">
                     <div class="player-container">
                       <!-- 用于显示该玩家的所有发言 -->
                       <el-avatar
@@ -298,8 +300,8 @@
             <el-select v-if="needKariudo" v-model="nowSelectPlayer" placeholder="猎人的行动"
               :style="{ width: isMobile ? '50%' : 'auto' }">
               <el-option v-if="needKariudo"
-                v-for="player in room.players?.filter(player => room?.gameSettings?.gmMode ? player.userId != room.roomCreatorId && player.isAlive == true : player.isAlive)"
-                :key="player.roomPlayerId" :label="player.name" :value="player.roomPlayerId"></el-option>
+                v-for="kairiudoPlayer in room.players?.filter(kairiudoPlayer => room?.gameSettings?.gmMode ? kairiudoPlayer.userId != room.roomCreatorId && kairiudoPlayer.roomPlayerId != player?.roomPlayerId && kairiudoPlayer.isAlive == true : kairiudoPlayer.isAlive && kairiudoPlayer.roomPlayerId != player?.roomPlayerId)"
+                :key="kairiudoPlayer.roomPlayerId" :label="kairiudoPlayer.name" :value="kairiudoPlayer.roomPlayerId"></el-option>
             </el-select>
             <el-button v-if="needKariudo" type="primary"
               @click="sendGameActionBody(ConstConfig.GAME_ACTION_KARIUDO)">确定行动</el-button>
@@ -309,8 +311,8 @@
             <el-select v-if="needVote" v-model="nowSelectPlayer" placeholder="请投票"
               :style="{ width: isMobile ? '50%' : 'auto' }">
               <el-option v-if="needVote"
-                v-for="player in room.players?.filter(player => room?.gameSettings?.gmMode ? player.userId != room.roomCreatorId && player.isAlive == true : player.isAlive)"
-                :key="player.roomPlayerId" :label="player.name" :value="player.roomPlayerId"></el-option>
+                v-for="votePlayer in room.players?.filter(votePlayer => room?.gameSettings?.gmMode ? votePlayer.userId != room.roomCreatorId && votePlayer.roomPlayerId != player?.roomPlayerId && votePlayer.isAlive == true : votePlayer.isAlive && votePlayer.roomPlayerId != player?.roomPlayerId)"
+                :key="votePlayer.roomPlayerId" :label="votePlayer.name" :value="votePlayer.roomPlayerId"></el-option>
             </el-select>
             <el-button v-if="needVote" type="primary"
               @click="sendGameActionBody(ConstConfig.GAME_ACTION_VOTE)">确定行动</el-button>
@@ -394,6 +396,10 @@
                 <el-input-number v-model="GameSettingForm.haitokushyaCount" :min="0" label="背德者数量" />
               </el-form-item>
 
+              <el-form-item label="听狂人数量">
+                <el-input-number v-model="GameSettingForm.kikyoujinCount" :min="0" label="听狂人数量" />
+              </el-form-item>
+
               <el-form-item label="猫又数量">
                 <el-input-number v-model="GameSettingForm.nekomataCount" :min="0" label="猫又数量" />
               </el-form-item>
@@ -403,11 +409,11 @@
                   GameSettingForm.reibaiCount -
                   GameSettingForm.uranaishiCount - GameSettingForm.jinrouCount - GameSettingForm.kairiudoCount -
                   GameSettingForm.kyouyuuCount - GameSettingForm.kyoujinCount -
-                  GameSettingForm.kitsuneCount - GameSettingForm.haitokushyaCount -
+                  GameSettingForm.kitsuneCount - GameSettingForm.haitokushyaCount - GameSettingForm.kikyoujinCount -
                   GameSettingForm.kyoushinjyaCount - GameSettingForm.nekomataCount : room.players.length -
                   GameSettingForm.reibaiCount -
                   GameSettingForm.uranaishiCount - GameSettingForm.jinrouCount - GameSettingForm.kairiudoCount -
-                  GameSettingForm.kyouyuuCount - GameSettingForm.kyoujinCount -
+                  GameSettingForm.kyouyuuCount - GameSettingForm.kyoujinCount - GameSettingForm.kikyoujinCount -
                   GameSettingForm.kitsuneCount - GameSettingForm.haitokushyaCount -
                   GameSettingForm.kyoushinjyaCount - GameSettingForm.nekomataCount + 1 }}</span>
               </el-form-item>
@@ -489,10 +495,11 @@
           </el-form-item>
           <div class="m-4">
             <p>选择头像</p>
-            <el-cascader v-model="selectedIcon" :options="iconUrls" :style="{ width: isMobile ? '100%' : 'auto' }" :props="{
-              expandTrigger: 'hover'
+            <el-cascader v-model="selectedIcon" :options="iconUrls" :style="{ width: isMobile ? '100%' : 'auto' }"
+              :props="{
+                expandTrigger: 'hover'
 
-            }" />
+              }" />
             <el-button @click="selectRandomIcon">在该子主题中随机选择头像</el-button>
           </div>
           <!-- 头像预览 -->
@@ -632,6 +639,7 @@ const GameSettingForm = ref({
   kitsuneCount: 0,
   haitokushyaCount: 0,
   nekomataCount: 0,
+  kikyoujinCount: 0,
   isFirstVictims: false,
   isHopeMode: false,
   dayDuration: 30,
@@ -896,6 +904,9 @@ const handleGameSettingConfirm = async (gameSetting) => {
   for (let i = 0; i < gameSetting.nekomataCount; i++) {
     identityList.push("猫又");
   }
+  for (let i = 0; i < gameSetting.kikyoujinCount; i++) {
+    identityList.push("听狂人");
+  }
 
   const ChangeGameSetting = async (gameSetting, identityList) => {
     return new Promise((resolve, reject) => {
@@ -1080,8 +1091,9 @@ function roomRefresh(gameActionBody) {
   const kyoushinjyaCount = identityListCount.value["狂信者"] || 0;
   const kitsuneCount = identityListCount.value["妖狐"] || 0;
   const haitokushyaCount = identityListCount.value["背德者"] || 0;
+  const kikyoujinCount = identityListCount.value["听狂人"] || 0;
   const nekomataCount = identityListCount.value["猫又"] || 0;
-  const murabitoCount = totalPlayers - jinrouCount - uranaishiCount - reibaiCount - kairiudoCount - kyouyuuCount - kyoujinCount - kitsuneCount - haitokushyaCount - kyoushinjyaCount - nekomataCount;
+  const murabitoCount = totalPlayers - jinrouCount - uranaishiCount - reibaiCount - kairiudoCount - kyouyuuCount - kyoujinCount - kitsuneCount - haitokushyaCount - kyoushinjyaCount - nekomataCount - kikyoujinCount;
   identityListCount.value["村人"] = murabitoCount;
 
   //是房主
@@ -1094,6 +1106,7 @@ function roomRefresh(gameActionBody) {
     GameSettingForm.value.kairiudoCount = identityListCount.value["猎人"] ? identityListCount.value["猎人"] : 0;
     GameSettingForm.value.kyouyuuCount = identityListCount.value["共有者"] ? identityListCount.value["共有者"] : 0;
     GameSettingForm.value.kyoujinCount = identityListCount.value["狂人"] ? identityListCount.value["狂人"] : 0;
+    GameSettingForm.value.kikyoujinCount = identityListCount.value["听狂人"] ? identityListCount.value["听狂人"] : 0;
     GameSettingForm.value.kyoushinjyaCount = identityListCount.value["狂信者"] ? identityListCount.value["狂信者"] : 0;
     GameSettingForm.value.kitsuneCount = identityListCount.value["妖狐"] ? identityListCount.value["妖狐"] : 0;
     GameSettingForm.value.haitokushyaCount = identityListCount.value["背德者"] ? identityListCount.value["背德者"] : 0;
@@ -1250,6 +1263,31 @@ function roomRefresh(gameActionBody) {
         } else if (gameActionBody.dayOrNightOrVote == "NIGHT") {
           GAME_SENDVALIABLE_CHANNEL.value = ["WOLFTALK", "SELFTALK"];
           nowSendChannel.value = GAME_SENDVALIABLE_CHANNEL.value.includes(nowSendChannel) ? nowSendChannel.value : "WOLFTALK";
+        } else if (gameActionBody.dayOrNightOrVote == "VOTING") {
+          GAME_SENDVALIABLE_CHANNEL.value = ["SELFTALK"];
+          nowSendChannel.value = GAME_SENDVALIABLE_CHANNEL.value.includes(nowSendChannel) ? nowSendChannel.value : "SELFTALK";
+        } else if (gameActionBody.dayOrNightOrVote == "SUSPEND") {
+          GAME_SENDVALIABLE_CHANNEL.value = ["SELFTALK"];
+          nowSendChannel.value = GAME_SENDVALIABLE_CHANNEL.value.includes(nowSendChannel) ? nowSendChannel.value : "SELFTALK";
+        } else {
+          GAME_SENDVALIABLE_CHANNEL.value = ["SELFTALK"];
+          nowSendChannel.value = "SELFTALK"
+        }
+        break;
+      case "听狂人":
+        GAME_SYSTEM_CHANNEL.value = ["ALL", "SYSTEM", "DAYTALK", "WOLFTALK", "SELFTALK"];
+        if (player.value.isAlive == false) {
+          GAME_SENDVALIABLE_CHANNEL.value = ["SELFTALK", "UNDERTALK"];
+          GAME_SYSTEM_CHANNEL.value.push("UNDERTALK")
+          nowSendChannel.value = GAME_SENDVALIABLE_CHANNEL.value.includes(nowSendChannel) ? nowSendChannel.value : "UNDERTALK";
+          break;
+        }
+        if (gameActionBody.dayOrNightOrVote == "DAY") {
+          GAME_SENDVALIABLE_CHANNEL.value = ["DAYTALK", "SELFTALK"];
+          nowSendChannel.value = GAME_SENDVALIABLE_CHANNEL.value.includes(nowSendChannel) ? nowSendChannel.value : "DAYTALK";
+        } else if (gameActionBody.dayOrNightOrVote == "NIGHT") {
+          GAME_SENDVALIABLE_CHANNEL.value = ["SELFTALK"];
+          nowSendChannel.value = GAME_SENDVALIABLE_CHANNEL.value.includes(nowSendChannel) ? nowSendChannel.value : "SELFTALK";
         } else if (gameActionBody.dayOrNightOrVote == "VOTING") {
           GAME_SENDVALIABLE_CHANNEL.value = ["SELFTALK"];
           nowSendChannel.value = GAME_SENDVALIABLE_CHANNEL.value.includes(nowSendChannel) ? nowSendChannel.value : "SELFTALK";
@@ -1557,16 +1595,34 @@ const formattedIdentityListCount = computed(() => {
 });
 
 function getMsgTitle(msg) {
-  if (msg.messageType == "SELFTALK") {
-    if (msg.messageGmToPlayerId != null && msg.messageGmToPlayerId == player?.value?.roomPlayerId) {
-      //是GM对自己的私聊
-      msg.playerName = "GM->你"
-    } else if (identityName.value == "GM" && msg.messageGmToPlayerId != null) {
-      //自己是GM 发送给玩家
-      var toPlayerName = room.value.players.find(player => player.roomPlayerId == msg.messageGmToPlayerId).name;
-      msg.playerName = "你->" + toPlayerName;
+  if (msg.messageGmToPlayerId != null && msg.messageGmToPlayerId == player?.value?.roomPlayerId && msg.messageType == "SELFTALK") {
+    //是GM对本用户的私聊
+    msg.playerName = "GM->你"
+  } else if (identityName.value == "GM" && msg.messageGmToPlayerId != null) {
+    //自己是GM 发送给玩家 私聊
+    var toPlayerName = room.value.players.find(player => player.roomPlayerId == msg.messageGmToPlayerId).name;
+    msg.playerName = "你->" + toPlayerName;
+  } else if (room?.value?.gameSettings?.gmMode && msg.userId == room.value.roomCreatorId && msg.messageGmToPlayerId == null) {
+    //GM对特定频道的消息
+    switch(msg.messageType){
+      case "WOLFTALK":
+      msg.playerName = "GM ->" + "狼频";
+      break;
+      case "KYOUYUUTALK":
+      msg.playerName = "GM ->" + "共频";
+      break;
+      case "KITSUNETALK":
+      msg.playerName = "GM ->" + "狐频";
+      break;
+      case "WATCHTALK":
+      msg.playerName = "GM ->" + "观战者";
+      break;
+      case "UNDERTALK":
+      msg.playerName = "GM ->" + "下界";
+      break;
     }
   }
+
   // msg.messageGmToPlayerId ? msg.messageGmToPlayerId == player?.value?.roomPlayerId ? 'GM→你:' : msg.playerName + ":" : msg.messageType == 'SELFTALK' ? msg.playerName + ":" : msg.playerName + "的自言自语:"
   return msg;
 }
@@ -1680,6 +1736,7 @@ const identityColor = computed(() => {
     case '人狼':
     case '狂人':
     case '狂信者':
+    case '听狂人':
     case '背德者':
     case '妖狐':
       return 'danger'; // 绿色
@@ -1859,15 +1916,15 @@ const currentMessages = computed(() => {
 
   /* 用户名占一部分宽度 */
   width: 100px;
-  /* 用户名的最大宽度 */
-  word-wrap: break-word;
-  /* 超过宽度换行 */
-  overflow-wrap: break-word;
-  /* 超过宽度换行 */
-  flex-shrink: 0;
   /* 不允许缩小用户名的宽度 */
   font-weight: bold;
   text-align: right;
+  /* 超出部分隐藏 */
+  overflow: hidden;
+  /* 不换行 */
+  white-space: nowrap;
+  /* 超出部分显示省略号 */
+  text-overflow: ellipsis;
 }
 
 .message-content {

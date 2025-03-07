@@ -1,21 +1,24 @@
 <template>
-  <div class="common-layout">
-    <el-container class="admin-home">
-      <!-- 引入侧边栏组件 -->
-      <Sidebar :style="{ width: isSidebarVisible ? '200px' : '0' }" />
+  <el-container class="admin-home">
+    <!-- 侧边栏 -->
+    <Sidebar :style="{ width: isSidebarVisible ? '200px' : '0' }" />
 
-      <!-- 主要内容区域 -->
-      <el-container direction="vertical" class="main-content">
-        <!-- 引入 Top 组件 -->
-        <Top @toggle-sidebar="toggleSidebar" />
-        <el-main class="content">
-          <!-- 路由展示组件 -->
-          <router-view />
-        </el-main>
-        <!-- <Footer /> -->
-      </el-container>
+    <!-- 主要内容区域 -->
+    <el-container class="main-content">
+      <!-- 顶部栏 -->
+      <Top @toggle-sidebar="toggleSidebar" />
+
+      <!-- 内容区域 -->
+      <el-main class="content">
+        <router-view />
+        <Footer />
+      </el-main>
+      
+
+      <!-- 页脚 -->
+      
     </el-container>
-  </div>
+  </el-container>
 </template>
 
 <script setup>
@@ -51,16 +54,26 @@ const toggleSidebar = () => {
 <style scoped>
 .admin-home {
   display: flex;
-  height: 100vh; /* 充满整个页面 */
+  flex-direction: row;
+  width: 100%;
+  /* 充满整个页面 */
+  height: 100vh; /* 占满整个视口高度 */
 }
 
 .main-content {
   display: flex;
+  flex: 1;
   flex-direction: column;
-  width: 100%; /* 占满剩余空间 */
+
+
+  /* 占满剩余空间 */
 }
 
 .content {
   padding: 1px;
+  flex: 1; /* 内容区域占据剩余空间 */
 }
+
+
+
 </style>
