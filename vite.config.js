@@ -26,4 +26,7 @@ export default defineConfig({
     sourcemap: false, // 关闭 Sourcemap
     minify: true
   },
+
 })
+
+
