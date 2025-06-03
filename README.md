@@ -1,3 +1,8 @@
+前端项目 用了找的vue项目模板，速成的vue 写的很烂，而且主要是游戏板块没封装
+
+
+
+
 # study-project-frontend
 
 This template should help get you started developing with Vue 3 in Vite.
